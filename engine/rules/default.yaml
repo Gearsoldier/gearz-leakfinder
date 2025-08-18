@@ -1,0 +1,24 @@
+version: "1.0.0"
+rules:
+  - name: "AWS Access Key"
+    severity: high
+    regex: "AKIA[0-9A-Z]{16}"
+
+  - name: "AWS Secret Key"
+    severity: critical
+    regex: "aws.{0,20}(secret|access)?.{0,20}?['\\\"]([0-9a-zA-Z/+]{40})['\\\"]"
+    flags: "gi"
+    validators: ["aws_secret_len"]
+
+  - name: "Google API Key"
+    severity: high
+    regex: "AIza[0-9A-Za-z-_]{35}"
+
+  - name: "JWT"
+    severity: medium
+    regex: "([A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+\\.[A-Za-z0-9-_]+)"
+    validators: ["jwt_format"]
+
+  - name: "Private RSA Key"
+    severity: critical
+    regex: "-----BEGIN RSA PRIVATE KEY-----"

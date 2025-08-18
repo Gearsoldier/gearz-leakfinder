@@ -1,36 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🔎 GEARZ LeakFinder
 
-## Getting Started
+**Redaction-first OSINT hunting tool** — scan code repos, package registries, Docker images, CI/CD logs, and archived web captures for accidentally leaked secrets.  
+Built for bug bounty pros, red teamers, and learners who want to see how real leaks are uncovered (safely, with redaction).
 
-First, run the development server:
+---
 
-```bash
+## ✨ Features
+
+- **Adapters**: GitHub • Wayback Machine • DockerHub • npm • PyPI • CI/CD logs
+- **Scope Builder UI**: point-and-click to define your targets → auto-saves to `scope.yaml`
+- **Redaction by default**: sensitive values are masked before logging
+- **Tutor Mode**: step-by-step explanations of what’s happening
+- **AI Summaries**: results are explained in plain language by local or hosted LLMs
+- **Export Pack**: one-click download of JSONL findings, AI summary, and Merkle audit
+- **Live Logs**: stream engine output directly in the UI
+- **Theme toggle**: dark, dim, or sunburst modes
+
+---
+
+## 🛠️ Setup
+
+1. **Clone and install**
+   ```bash
+   git clone https://github.com/yourname/gearz-leakfinder.git
+   cd gearz-leakfinder
+   npm install
+Auth tokens
+
+GitHub: Generate a Personal Access Token (classic, public_repo scope is enough).
+
+Hugging Face: hf_token for AI summaries.
+
+Export tokens into your shell (add to ~/.bashrc for permanence):
+
+bash
+Copy
+Edit
+export GITHUB_TOKEN=ghp_xxxxx
+export HF_TOKEN=hf_xxxxx
+Start UI
+
+bash
+Copy
+Edit
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Open → http://localhost:3000
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+🎯 Usage
+1. Build your scope
+From the UI:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+GitHub: orgs, repos, or full repo URLs
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Wayback: domains or URLs to pull archived pages
 
-## Learn More
+DockerHub: orgs/users or full hub URLs
 
-To learn more about Next.js, take a look at the following resources:
+npm / PyPI: scopes or prefixes (@org, org-*, org*)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+CI/CD: artifact or log URLs
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+APK / IPA: package or bundle IDs
 
-## Deploy on Vercel
+Click Save Scope → writes scope.yaml.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. Run a scan
+In the Engine Scan panel:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Select adapters (e.g., github, wayback, dockerhub)
+
+Toggle Redact secrets ✅
+
+Adjust concurrency (default: 6)
+
+Click Run scan + AI summary
+
+Logs stream live; results are written into ./data/out/.
+
+3. Review results
+findings.jsonl → machine-readable findings
+
+findings.sarif.json → import into security dashboards
+
+summary.md → AI-generated analysis for humans
+
+Export everything with one click: Download Export Pack
+
+⚡ Example Scope (Mozilla Bug Bounty)
+yaml
+Copy
+Edit
+github:
+  targets:
+    - "mozilla"
+    - "mozilla-mobile"
+    - "mozilla-services"
+    - "mozilla-releng"
+    - "mozilla-iot"
+
+wayback:
+  targets:
+    - "github.com/mozilla"
+    - "hg.mozilla.org"
+    - "archive.mozilla.org"
+
+dockerhub:
+  targets:
+    - "mozilla"
+
+npm:
+  targets:
+    - "@mozilla"
+    - "mozilla-*"
+
+pypi:
+  targets:
+    - "mozilla*"
+
+
+📦 Roadmap
+ Custom regex packs (user-supplied)
+
+ Multi-engine federation (run several adapters in parallel clusters)
+
+ Timeline mode for Wayback leaks
+
+ Export directly to HackerOne / Bugcrowd report template
+
+ Preset scopes for popular programs (Mozilla, Google, etc.)
+
+⚠️ Disclaimer
+This tool is for educational and defensive research only.
+Use it only on assets that are in-scope and authorized by a bug bounty program or your own organization.
+Never target systems you don’t have permission to test.
+
+Made with 🧡 by the GEARZ crew. (solo dev just me and a cat)

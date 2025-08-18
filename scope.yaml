@@ -1,0 +1,35 @@
+github:
+  targets:
+    - mozilla
+    - mozilla-mobile
+    - mozilla-services
+    - mozilla-releng
+    - mozilla-iot
+    - https://github.com/mozilla
+dockerhub:
+  targets:
+    - mozilla
+    - https://hub.docker.com/u/mozilla
+npm:
+  targets:
+    - "@mozilla"
+    - mozilla-*
+pypi:
+  targets:
+    - mozilla*
+wayback:
+  targets:
+    - github.com/mozilla
+    - hg.mozilla.org
+    - archive.mozilla.org
+cicd:
+  targets: []
+artifacts:
+  targets:
+    - https://archive.mozilla.org
+apk:
+  targets:
+    - org.mozilla.firefox
+ipa:
+  targets:
+    - org.mozilla.ios.Firefox
