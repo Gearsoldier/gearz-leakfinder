@@ -1,133 +1,149 @@
 # 🔎 GEARZ LeakFinder
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Gearsoldier/gearz-leakfinder/main/public/linkfinder.png" alt="GEARZ LeakFinder Theme" width="800">
+  <img src="public/linkfinder.png" alt="GEARZ LeakFinder Theme" width="800">
 </p>
 
-**Redaction-first OSINT hunting tool** — scan code repos, package registries, Docker images, CI/CD logs, and archived web captures for accidentally leaked secrets.  
-Built for bug bounty pros, red teamers, and learners who want to see how real leaks are uncovered (safely, with redaction).
+GEARZ LeakFinder is an experimental Next.js and TypeScript toolkit for finding potential secret exposures in explicitly authorized sources. It combines a scope editor, source adapters, regex-based detection, and JSONL/SARIF reporting, with optional Hugging Face summaries.
 
----
+**This is a development prototype.** Several integration and data-handling limitations remain. Read the safety notes below before scanning or sharing output; a zero-result report does not establish that an asset is free of secrets.
 
-## ✨ Features
+## What is in the repository
 
-- **Adapters**: GitHub • Wayback Machine • DockerHub • npm • PyPI • CI/CD logs
-- **Scope Builder UI**: point-and-click to define your targets → auto-saves to `scope.yaml`
-- **Redaction by default**: sensitive values are masked before logging
-- **Tutor Mode**: step-by-step explanations of what’s happening
-- **AI Summaries**: results are explained in plain language by local or hosted LLMs
-- **Export Pack**: one-click download of JSONL findings, AI summary, and Merkle audit
-- **Live Logs**: stream engine output directly in the UI
-- **Theme toggle**: dark, dim, or sunburst modes
+- **Scope Builder:** edit per-source targets and save them to `scope.yaml`
+- **Engine Scan panel:** choose adapters and concurrency, stream CLI logs, and download an export pack
+- **Detection engine:** YAML regex rules, entropy and format checks, scoring, caching, and masked previews
+- **Reports:** JSONL, SARIF, audit data, result comparisons, and a compliance-file bundle
+- **Optional AI summary:** the engine sends selected finding fields to a Hugging Face model
+- **Interface:** inline Tutor Mode explanations and dim/sunburst themes
 
----
+These components are present in source. Their integration is incomplete; see [Current limitations](#current-limitations).
 
-## 🛠️ Setup
+### Source coverage
 
-1. **Clone and install**
-   ```bash
-   git clone https://github.com/Gearsoldier/gearz-leakfinder.git
-   cd gearz-leakfinder
-   npm install
-Auth tokens
+- **GitHub:** selected text files from repository trees, with repository and file caps
+- **Wayback Machine:** text from archived web captures
+- **DockerHub:** repository README text
+- **npm:** package README text
+- **PyPI:** package descriptions or summaries; prefix search is best-effort
+- **Additional adapters:** CI/CD URLs, Jenkins, CircleCI, shared Sentry/Crashlytics URLs, DNS AXFR, and local APK/IPA files have separate implementations and configuration requirements
 
-GitHub: Generate a Personal Access Token (classic, public_repo scope is enough).
+DockerHub does not inspect image layers, and the registry adapters do not unpack package archives. APK/IPA adapters expect local file paths and external tools; entering an application ID in the UI does not download or analyze a mobile app.
 
-Hugging Face: HF_TOKEN for AI summaries.
+## Safety and data handling
 
-Export tokens into your shell (add to ~/.bashrc for permanence):
+- Use only assets and data you own or have explicit, current permission to assess. The included `scope.yaml` contains third-party examples; replace them before use. Their presence is not authorization.
+- **JSONL can contain raw secrets.** The engine masks the `preview` field but also stores `evidence.match`, surrounding context, and an ID containing part of the match. The JSONL writer serializes the full finding. Treat output files and export ZIPs as sensitive.
+- **Dry run is not a no-network mode.** The UI sends `--dry-run` and `--redact`, but the current CLI does not parse those switches. Do not rely on either control to prevent requests or sanitize exports.
+- AI summaries send masked previews, artifact URLs, and metadata to Hugging Face. Review what those fields can contain and obtain any required approval before enabling hosted analysis.
+- Keep the app local and trusted-only. The routes can start processes, fetch URLs, write scope files, and export findings without an application authentication layer.
 
-export GITHUB_TOKEN=ghp_xxxxx
-export HF_TOKEN=hf_xxxxx
-Start UI
+## Local setup
 
-npm run dev
-Open → http://localhost:3000
+### Requirements
 
-🎯 Usage
-1. Build your scope
-From the UI:
+- Node.js and npm compatible with the locked Next.js 15.4.4 release
+- A local environment that supports Node.js child processes and writable `scope.yaml`, `data/out/`, and `.cache/`
+- Any external tools required by an adapter you choose to investigate
 
-GitHub: orgs, repos, or full repo URLs
+`better-sqlite3` is a native dependency, so installation may need platform build tools if a compatible prebuilt binary is unavailable. Several engine dependencies are declared as development dependencies; do not omit them when preparing the local engine.
 
-Wayback: domains or URLs to pull archived pages
+### Install and open the interface
 
-DockerHub: orgs/users or full hub URLs
+```bash
+git clone https://github.com/Gearsoldier/gearz-leakfinder.git
+cd gearz-leakfinder
+npm ci
+npm run dev -- --hostname 127.0.0.1
+```
 
-npm / PyPI: scopes or prefixes (@org, org-*, org*)
+Open [http://localhost:3000](http://localhost:3000). Review and replace the supplied scope before selecting any scan action.
 
-CI/CD: artifact or log URLs
+### Optional environment variables
 
-APK / IPA: package or bundle IDs
+- `GITHUB_TOKEN` or `GH_TOKEN`: used by the engine's GitHub adapter; unauthenticated requests are subject to stricter rate limits
+- `HF_TOKEN`: required for the engine's hosted Hugging Face summary
+- `NEXT_PUBLIC_BASE_URL`: used by the legacy Quick Search route to call the engine endpoint
 
-Click Save Scope → writes scope.yaml.
+Provide secrets through the local process environment and keep them out of source control. The standalone CLI does not load a Next.js `.env.local` file itself. Use the minimum access needed for your authorized sources.
 
-2. Run a scan
-In the Engine Scan panel:
+The engine summarizer currently implements Hugging Face only, with `openchat/openchat_3.5` as its default model. Provider and model availability must be checked separately. A browser-side Ollama call exists in the incomplete Quick Search flow; it is not an engine summarization option.
 
-Select adapters (e.g., github, wayback, dockerhub)
+## Scope and workflow
 
-Toggle Redact secrets ✅
+The main source adapters accept per-adapter target lists. This empty example makes no claim to third-party authorization:
 
-Adjust concurrency (default: 6)
-
-Click Run scan + AI summary
-
-Logs stream live; results are written into ./data/out/.
-
-3. Review results
-findings.jsonl → machine-readable findings
-
-findings.sarif.json → import into security dashboards
-
-summary.md → AI-generated analysis for humans
-
-Export everything with one click: Download Export Pack
-
-⚡ Example Scope (Mozilla Bug Bounty)
-
+```yaml
 github:
-  targets:
-    - "mozilla"
-    - "mozilla-mobile"
-    - "mozilla-services"
-    - "mozilla-releng"
-    - "mozilla-iot"
-
+  targets: []
 wayback:
-  targets:
-    - "github.com/mozilla"
-    - "hg.mozilla.org"
-    - "archive.mozilla.org"
-
+  targets: []
 dockerhub:
-  targets:
-    - "mozilla"
-
+  targets: []
 npm:
-  targets:
-    - "@mozilla"
-    - "mozilla-*"
-
+  targets: []
 pypi:
-  targets:
-    - "mozilla*"
-📦 Roadmap
-Custom regex packs (user-supplied)
+  targets: []
+```
 
-Multi-engine federation (run several adapters in parallel clusters)
+Add only specifically authorized targets after reviewing the current integration limitations. Scope matching is a best-effort filter, not an authorization system or network sandbox.
 
-Timeline mode for Wayback leaks
+The intended workflow is to save scope, select adapters in **Engine Scan**, inspect live logs, and review local report files before exporting. **Quick Company / Keyword Search** is not a reliable alternative: its company input is not applied to the engine's scope, and the engine response does not provide the result array the page expects.
 
-Export directly to HackerOne / Bugcrowd report templates
+### Command reference
 
-Preset scopes for popular programs (Mozilla, Google, etc.)
+```bash
+# Show CLI usage without starting a scan
+npm run scan
 
-⚠️ Disclaimer
-This tool is for educational and defensive research only.
-Use it only on assets that are in-scope and authorized by a bug bounty program or your own organization.
-Never target systems you don’t have permission to test.
+# Start the development server locally
+npm run dev -- --hostname 127.0.0.1
+
+# Build, then serve the existing build locally
+npm run build
+npm run start -- --hostname 127.0.0.1
+```
+
+`npm run scan -- scan` starts a real scan using the selected scope; the CLI accepts `--adapters`, `--scope`, `--out`, and `--concurrency`. Hosted summarization is requested with `--ai openchat`, optionally with `--ai-model`.
+
+The `scan:demo` script also makes real requests against the bundled scope. Do not run it as an offline demonstration.
+
+Reporting subcommands are invoked through the existing `scan` script, for example `npm run scan -- delta`, `npm run scan -- compliance`, or `npm run scan -- siem-splunk`, with their required arguments. There are no separate `delta`, `export:compliance`, or `siem-splunk` npm scripts. Splunk export sends report data to the configured destination.
+
+## Output files
+
+The engine's default output directory is `data/out/`:
+
+- `findings.jsonl`: full findings, including potentially sensitive raw evidence
+- `findings.sarif.json`: SARIF results with masked preview properties
+- `summary.md`: generated when hosted summarization runs
+- `audit.merkle.json`: audit seal when audit entries exist
+- `delta.json` and `drift.csv`: produced by the comparison subcommand
+- `compliance/`: produced by the compliance-bundle subcommand
+
+The export endpoint includes whichever of these files are present. Review their contents and timestamps; optional files left by an earlier run can be included.
+
+## Current limitations
+
+- **Scope-filter integration:** the engine passes an artifact string to `inScope`, while the filter expects an object containing artifact or metadata fields. Current runs can therefore discard fetched items and report no findings.
+- **CI/CD integration:** the generic CI/CD module has incompatible regex syntax and a different fetch contract from the engine's async-generator contract. The CLI's optional loader can fall back to the CircleCI adapter.
+- **Configuration differences:** mobile, telemetry, DNS, and vendor-specific CI adapters use legacy fields that the Scope Builder does not fully represent. Saving through the UI can discard those fields.
+- **GitHub coverage:** explicit repository targets assume the `main` branch, and scans are capped and extension-filtered. This is not a full repository-history scan.
+- **Status badges:** the page's token and connection indicators are static labels, not live credential checks.
+- **Validation:** the repository has no automated test suite or test script. It declares `npm run lint` using `next lint`; build and lint success still need to be established. The supplied commands are not a statement that this checkout passes them.
+
+## Project map
+
+- [`app/`](app/): interface and API routes
+- [`engine/cli.ts`](engine/cli.ts): commands and adapter registry
+- [`engine/index.ts`](engine/index.ts): detection pipeline
+- [`engine/adapters/`](engine/adapters/): source-specific collectors
+- [`engine/rules/default.yaml`](engine/rules/default.yaml): built-in detection rules
+- [`engine/report/`](engine/report/): report writers
+- [`engine/safety/`](engine/safety/): scope filtering, preview masking, and audit helpers
+
+## Roadmap
+
+Ideas from the original project roadmap include user-supplied rule packs, distributed adapter execution, richer Wayback timelines, and report templates for vulnerability-disclosure programs. These are future directions, not completion or delivery commitments.
 
 Made with 🧡 by the GEARZ crew (solo dev, me and a cat 🐈).
-
-
